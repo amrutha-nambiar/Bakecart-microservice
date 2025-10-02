@@ -1,0 +1,84 @@
+const productList = document.getElementById('product-list');
+const orderList = document.getElementById('order-list');
+const orderForm = document.getElementById('order-form');
+const orderMessage = document.getElementById('order-message');
+
+const PRODUCT_URL = "$PRODUCT_URL";
+const ORDER_URL = "$ORDER_URL";
+
+// Load products from API
+async function loadProducts() {
+    try {
+        const res = await fetch(PRODUCT_URL);
+        if (!res.ok) throw new Error(`Failed to fetch products: ${res.status}`);
+        const products = await res.json();
+        productList.innerHTML = '';
+        products.forEach(p => {
+            const li = document.createElement('li');
+            li.textContent = `ID: ${p.id}, Name: ${p.name}, Price: $${p.price}`;
+            productList.appendChild(li);
+        });
+    } catch (error) {
+        productList.innerHTML = `<li style="color:red;">Error loading products: ${error.message}</li>`;
+        console.error(error);
+    }
+}
+
+// Load orders from API
+async function loadOrders() {
+    try {
+        const res = await fetch(ORDER_URL);
+        if (!res.ok) throw new Error(`Failed to fetch orders: ${res.status}`);
+        const orders = await res.json();
+        orderList.innerHTML = '';
+        orders.forEach(o => {
+            const li = document.createElement('li');
+            const productInfo = o.product ? `${o.product.name} ($${o.product.price})` : "No product info";
+            li.textContent = `Order ID: ${o.order_id}, Product ID: ${o.product_id}, Quantity: ${o.quantity}, Product: ${productInfo}`;
+            orderList.appendChild(li);
+        });
+    } catch (error) {
+        orderList.innerHTML = `<li style="color:red;">Error loading orders: ${error.message}</li>`;
+        console.error(error);
+    }
+}
+
+// Handle order form submission
+orderForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const product_id = parseInt(document.getElementById('product_id').value);
+    const quantity = parseInt(document.getElementById('quantity').value);
+
+    if (isNaN(product_id) || isNaN(quantity) || quantity <= 0) {
+        orderMessage.textContent = "Please enter valid Product ID and Quantity.";
+        orderMessage.style.color = "red";
+        return;
+    }
+
+    try {
+        const res = await fetch(ORDER_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ product_id, quantity })
+        });
+
+        if (!res.ok) throw new Error(`Failed to place order: ${res.status}`);
+        
+        orderMessage.textContent = "✅ Order placed successfully!";
+        orderMessage.style.color = "green";
+
+        // Clear form
+        orderForm.reset();
+        
+        // Reload orders
+        await loadOrders();
+    } catch (error) {
+        orderMessage.textContent = `❌ ${error.message}`;
+        orderMessage.style.color = "red";
+        console.error(error);
+    }
+});
+
+// Initial load
+loadProducts();
+loadOrders();
